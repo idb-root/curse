@@ -1,0 +1,13 @@
+build:
+  stage: build
+  image: "10.142.144.70/cicd/node:20.19.0-alpine"
+  tags:
+    - cns
+  script:
+    - echo "this is a 111" >> /root/.m2/aaa.txt
+    - node --version
+    - cp -R /root/.m2/node_modules/caremate-admin-web/node_modules .
+    - npm run build
+  artifacts:
+    paths:
+      - dist
