@@ -1,0 +1,78 @@
+variables:
+  PROJECT_NAME: "hss_admin_web"
+  PROJECT_SPACE: "cns-hss"
+  APP_VERSIONS: "1.0"
+  NODE_IMAGE: "10.142.144.70/cicd/node:20.19.0-alpine"
+  DOCKER_IMAGE: "10.142.144.70/cicd/docker:latest"
+  IMAGE_DIR_UAT: "10.142.144.70/hmc-caremate"
+  IMAGE_DIR_PRD: "csphere.cignacmb.com/hmsc-edge"
+  HARBOR_HOST_UAT: "10.142.144.70"
+  HARBOR_HOST_PRD: "csphere.cignacmb.com"
+
+stages:
+  - build
+  - push
+
+build:
+  stage: build
+  image: "${NODE_IMAGE}"
+  tags:
+    - cns
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "develop" || $CI_COMMIT_BRANCH == "master"'
+    - when: never
+  script:
+    - node --version
+    - cp -R /root/.m2/node_modules/xn-health-admin-web/node_modules .
+    - npm run build
+  artifacts:
+    paths:
+      - dist
+
+push:develop:
+  stage: push
+  image: "${DOCKER_IMAGE}"
+  tags:
+    - cns
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+    - when: never
+  needs:
+    - build
+  variables:
+    HARBOR_HOST: "${HARBOR_HOST_UAT}"
+    HARBOR_USER: "${HARBOR_USER_UAT}"
+    HARBOR_PASSWORD: "${HARBOR_PASSWORD_UAT}"
+    IMAGE_DIR: "${IMAGE_DIR_UAT}"
+  script:
+    - ls dist/
+    - printf '%s' "${HARBOR_PASSWORD}" | docker login "${HARBOR_HOST}" -u "${HARBOR_USER}" --password-stdin
+    - docker build -t "${PROJECT_NAME}:${APP_VERSIONS}" . -f ./Dockerfile-cns
+    - docker tag "${PROJECT_NAME}:${APP_VERSIONS}" "${IMAGE_DIR}/${PROJECT_NAME}:${APP_VERSIONS}"
+    - echo "ImagesTag=${APP_VERSIONS}"
+    - echo "${IMAGE_DIR}/${PROJECT_NAME}:${APP_VERSIONS}"
+    - docker push "${IMAGE_DIR}/${PROJECT_NAME}:${APP_VERSIONS}"
+
+push:master:
+  stage: push
+  image: "${DOCKER_IMAGE}"
+  tags:
+    - prod
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "master"'
+    - when: never
+  needs:
+    - build
+  variables:
+    HARBOR_HOST: "${HARBOR_HOST_PRD}"
+    HARBOR_USER: "${HARBOR_USER_PRD}"
+    HARBOR_PASSWORD: "${HARBOR_PASSWORD_PRD}"
+    IMAGE_DIR: "${IMAGE_DIR_PRD}"
+  script:
+    - ls dist/
+    - printf '%s' "${HARBOR_PASSWORD}" | docker login "${HARBOR_HOST}" -u "${HARBOR_USER}" --password-stdin
+    - docker build -t "${PROJECT_NAME}:${APP_VERSIONS}" . -f ./Dockerfile-cns
+    - docker tag "${PROJECT_NAME}:${APP_VERSIONS}" "${IMAGE_DIR}/${PROJECT_NAME}:${APP_VERSIONS}"
+    - echo "ImagesTag=${APP_VERSIONS}"
+    - echo "${IMAGE_DIR}/${PROJECT_NAME}:${APP_VERSIONS}"
+    - docker push "${IMAGE_DIR}/${PROJECT_NAME}:${APP_VERSIONS}"
