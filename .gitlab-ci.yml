@@ -22,13 +22,29 @@ variables:
   G_CI_SONAR_URL: "http://10.142.152.5:9000/"
   G_CI_GIT_FLAG: "check"
   HARBOR_NAMESPACE: "hmc-caremate"
+  # APP_VERSIONS 由 init_version job 在流水线启动时生成（格式：YYYYMMDDHHmmss）
 
 stages:
+  - .pre
   - package
   - build
 
+init_version:
+  stage: .pre
+  image: "${DOCKER_IMAGE}"
+  tags:
+    - "${GITLAB_RUNNER_TAGS}"
+  script:
+    - echo "APP_VERSIONS=$(date +%Y%m%d%H%M%S)" >> version.env
+    - cat version.env
+  artifacts:
+    reports:
+      dotenv: version.env
+
 package:
   stage: package
+  needs:
+    - job: init_version
   image: "${MAVEN_IMAGE}"
   tags:
     - cns
@@ -64,11 +80,11 @@ build:
   image: "${DOCKER_IMAGE}"
   tags:
     - "${GITLAB_RUNNER_TAGS}"
-  dependencies:
-    - package
+  needs:
+    - job: init_version
+    - job: package
   script:
-    - export APP_VERSIONS=$(date +%Y%m%d%H%M%S)
-    - echo "APP_VERSIONS=$$APP_VERSIONS"
+    - echo "APP_VERSIONS=${APP_VERSIONS}"
     - docker login ${HARBOR_HOST_UAT} -u ${HARBOR_USER_UAT} -p ${HARBOR_PASSWORD_UAT}
     - export APP_JAR=$(ls caremate-admin-api-web/target/*.jar | head -n 1)
     - echo "JAR file=$$APP_JAR"
@@ -77,11 +93,11 @@ build:
     - ls -la ./app.jar
     # 关键修复：临时禁用 .dockerignore，避免 JAR 被排除
     - mv .dockerignore .dockerignore.bak 2>/dev/null || true
-    - docker build --build-arg JAR=app.jar --build-arg APP_NAME=${PROJECT_NAME} -t ${PROJECT_NAME}:$$APP_VERSIONS --file ./Dockerfile .
+    - docker build --build-arg JAR=app.jar --build-arg APP_NAME=${PROJECT_NAME} -t ${PROJECT_NAME}:${APP_VERSIONS} --file ./Dockerfile .
     - mv .dockerignore.bak .dockerignore 2>/dev/null || true
-    - docker tag ${PROJECT_NAME}:$$APP_VERSIONS ${HARBOR_HOST_UAT}/${HARBOR_NAMESPACE}/${PROJECT_NAME}:$$APP_VERSIONS
-    - docker push ${HARBOR_HOST_UAT}/${HARBOR_NAMESPACE}/${PROJECT_NAME}:$$APP_VERSIONS
-    - echo "Image pushed successfully, tag=$$APP_VERSIONS"
+    - docker tag ${PROJECT_NAME}:${APP_VERSIONS} ${HARBOR_HOST_UAT}/${HARBOR_NAMESPACE}/${PROJECT_NAME}:${APP_VERSIONS}
+    - docker push ${HARBOR_HOST_UAT}/${HARBOR_NAMESPACE}/${PROJECT_NAME}:${APP_VERSIONS}
+    - echo "Image pushed successfully, tag=${APP_VERSIONS}"
   cache:
     key: "${CI_COMMIT_REF_NAME}"
     paths:
