@@ -68,20 +68,20 @@ build:
     - package
   script:
     - export APP_VERSIONS=$(date +%Y%m%d%H%M%S)
-    - echo "APP_VERSIONS=${APP_VERSIONS}"
-    - "docker login ${HARBOR_HOST_UAT} -u ${HARBOR_USER_UAT} -p ${HARBOR_PASSWORD_UAT}"
-    - "export APP_JAR=$(ls caremate-admin-api-web/target/*.jar | head -n 1)"
-    - "echo \"JAR file: ${APP_JAR}\""
-    - "ls -la caremate-admin-api-web/target/"
-    - "cp ${APP_JAR} ./app.jar"
-    - "ls -la ./app.jar"
+    - echo "APP_VERSIONS=$$APP_VERSIONS"
+    - docker login ${HARBOR_HOST_UAT} -u ${HARBOR_USER_UAT} -p ${HARBOR_PASSWORD_UAT}
+    - export APP_JAR=$(ls caremate-admin-api-web/target/*.jar | head -n 1)
+    - echo "JAR file=$$APP_JAR"
+    - ls -la caremate-admin-api-web/target/
+    - cp $$APP_JAR ./app.jar
+    - ls -la ./app.jar
     # 关键修复：临时禁用 .dockerignore，避免 JAR 被排除
-    - "mv .dockerignore .dockerignore.bak 2>/dev/null || true"
-    - "docker build --build-arg JAR=app.jar --build-arg APP_NAME=${PROJECT_NAME} -t ${PROJECT_NAME}:${APP_VERSIONS} --file ./Dockerfile ."
-    - "mv .dockerignore.bak .dockerignore 2>/dev/null || true"
-    - "docker tag ${PROJECT_NAME}:${APP_VERSIONS} ${HARBOR_HOST_UAT}/${HARBOR_NAMESPACE}/${PROJECT_NAME}:${APP_VERSIONS}"
-    - "docker push ${HARBOR_HOST_UAT}/${HARBOR_NAMESPACE}/${PROJECT_NAME}:${APP_VERSIONS}"
-    - "echo \"Image pushed successfully\""
+    - mv .dockerignore .dockerignore.bak 2>/dev/null || true
+    - docker build --build-arg JAR=app.jar --build-arg APP_NAME=${PROJECT_NAME} -t ${PROJECT_NAME}:$$APP_VERSIONS --file ./Dockerfile .
+    - mv .dockerignore.bak .dockerignore 2>/dev/null || true
+    - docker tag ${PROJECT_NAME}:$$APP_VERSIONS ${HARBOR_HOST_UAT}/${HARBOR_NAMESPACE}/${PROJECT_NAME}:$$APP_VERSIONS
+    - docker push ${HARBOR_HOST_UAT}/${HARBOR_NAMESPACE}/${PROJECT_NAME}:$$APP_VERSIONS
+    - echo "Image pushed successfully, tag=$$APP_VERSIONS"
   cache:
     key: "${CI_COMMIT_REF_NAME}"
     paths:
