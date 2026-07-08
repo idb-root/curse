@@ -35,7 +35,8 @@ init_version:
   tags:
     - "${GITLAB_RUNNER_TAGS}"
   script:
-    - echo "APP_VERSIONS=$(date +%Y%m%d-%H%M%S)" >> version.env
+    # docker 镜像通常无 tzdata，TZ=Asia/Shanghai 不生效；用 UTC 时间戳 +8 小时换算东八区
+    - echo "APP_VERSIONS=$(date -u -d "@$(($(date -u +%s) + 28800))" +%Y%m%d-%H%M%S)" >> version.env
     - cat version.env
   artifacts:
     reports:
