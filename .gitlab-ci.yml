@@ -22,7 +22,7 @@ variables:
   G_CI_SONAR_URL: "http://10.142.152.5:9000/"
   G_CI_GIT_FLAG: "check"
   HARBOR_NAMESPACE: "hmc-caremate"
-  # APP_VERSIONS 由 init_version job 在流水线启动时生成（格式：YYYYMMDDHHmmss）
+  # APP_VERSIONS 由 init_version job 在流水线启动时生成（格式：YYYYMMDD-HHmmss）
 
 stages:
   - .pre
@@ -35,7 +35,7 @@ init_version:
   tags:
     - "${GITLAB_RUNNER_TAGS}"
   script:
-    - echo "APP_VERSIONS=$(date +%Y%m%d%H%M%S)" >> version.env
+    - echo "APP_VERSIONS=$(date +%Y%m%d-%H%M%S)" >> version.env
     - cat version.env
   artifacts:
     reports:
