@@ -1,0 +1,121 @@
+variables:
+  PROJECT_SPACE: "cns-admin-api"
+  GITLAB_RUNNER_TAGS: "cns"
+  GITLAB_RUNNER_TAGS_PRD: "prod"
+  MAVEN_IMAGE: "10.142.144.70/cicd/maven-jdk17:3.6.3-jdk17u15"
+  DOCKER_IMAGE: "10.142.144.70/cicd/docker:latest"
+  HARBOR_HOST_UAT: "10.142.144.70"
+  HARBOR_USER_UAT: "jeck.mei@cignacmb.com"
+  HARBOR_PASSWORD_UAT: "Aa123456!"
+  WORK_DIR: "/cns-hss"
+  CSPHERE_CLI_IMAGE: "10.142.144.70/cicd/csphere-cli:latest"
+  CSPHERE_API_KEY: "03eaded3225ac7f69d84ec30ad8c06fd6618a74c"
+  CSPHERE_ENDPOINT: "https://csphere.cignacmb.com"
+  HARBOR_HOST_PRD: "csphere.cignacmb.com"
+  HARBOR_USER_PRD: "jeck.mei@cignacmb.com"
+  HARBOR_PASSWORD_PRD: "PRD_hmsc_edge@123"
+  APP_NAME: "hlp-ewp-uat"
+  PROJECT_NAME: "cns-admin-api"
+  G_CI_SONAR_TOKEN: "1272629f85584b895dc396c6998c8143bb416185"
+  G_CI_SONAR_URL: "http://10.142.152.5:9000/"
+  G_CI_GIT_FLAG: "check"
+  HARBOR_NAMESPACE: "hmc-caremate"
+  APP_VERSIONS: "${CI_COMMIT_SHORT_SHA}"
+
+stages:
+  - package
+  - build
+
+package:
+  stage: package
+  image: "${MAVEN_IMAGE}"
+  tags:
+    - "${GITLAB_RUNNER_TAGS}"
+  rules:
+    - if: $CI_COMMIT_BRANCH == "develop" || $CI_COMMIT_BRANCH == "master"
+  before_script:
+    - mkdir -p /opt
+    - tar -xzf /root/.m2/java/jdk-21.0.8_linux-x64_bin.tar.gz -C /opt
+    - export JAVA_HOME=/opt/jdk-21.0.8
+    - tar -xzf /root/.m2/java/apache-maven-3.9.16-bin.tar.gz -C /opt
+    - export MAVEN_HOME=/opt/apache-maven-3.9.16
+    - export PATH=$JAVA_HOME/bin:$MAVEN_HOME/bin:$PATH
+    - java --version
+    - mvn --version
+  script:
+    - cd caremate-admin-api-entity
+    - mvn install -o
+    - cd ../caremate-admin-api-web
+    - mvn clean package '-Ptesthmc,!dev' -o
+    - pwd
+    - ls -la target/
+  cache:
+    key: ${CI_COMMIT_REF_NAME}
+    paths:
+      - caremate-admin-api-web/target/
+  artifacts:
+    paths:
+      - caremate-admin-api-web/target/*.jar
+    expire_in: 1 day
+
+build-test:
+  stage: build
+  image: "${DOCKER_IMAGE}"
+  tags:
+    - "${GITLAB_RUNNER_TAGS}"
+  dependencies:
+    - package
+  rules:
+    - if: $CI_COMMIT_BRANCH == "develop"
+  script:
+    - "docker login ${HARBOR_HOST_UAT} -u ${HARBOR_USER_UAT} -p ${HARBOR_PASSWORD_UAT}"
+    - "export APP_JAR=$(ls caremate-admin-api-web/target/*.jar | head -n 1)"
+    - "export JAR_NAME=$(basename \"${APP_JAR}\")"
+    - "echo \"JAR file: ${APP_JAR} (name: ${JAR_NAME})\""
+    - "ls -la caremate-admin-api-web/target/"
+    - "mv .dockerignore .dockerignore.bak 2>/dev/null || true"
+    - "docker build --build-arg JAR=${APP_JAR} --build-arg JAR_NAME=${JAR_NAME} --build-arg APP_NAME=${PROJECT_NAME} -t ${PROJECT_NAME}:${APP_VERSIONS} --file ./Dockerfile ."
+    - "mv .dockerignore.bak .dockerignore 2>/dev/null || true"
+    - "docker tag ${PROJECT_NAME}:${APP_VERSIONS} ${HARBOR_HOST_UAT}/${HARBOR_NAMESPACE}/${PROJECT_NAME}:latest"
+    - docker push ${HARBOR_HOST_UAT}/${HARBOR_NAMESPACE}/${PROJECT_NAME}:latest
+    - "echo \"Image pushed successfully to UAT\""
+  cache:
+    key: "${CI_COMMIT_REF_NAME}"
+    paths:
+      - caremate-admin-api-web/target/
+  artifacts:
+    paths:
+      - caremate-admin-api-web/target/*.jar
+    expire_in: 1 day
+
+build-prod:
+  stage: build
+  image: "${DOCKER_IMAGE}"
+  tags:
+    - "${GITLAB_RUNNER_TAGS_PRD}"
+  dependencies:
+    - package
+  rules:
+    - if: $CI_COMMIT_BRANCH == "master"
+  script:
+    - "echo \"Checking Harbor connectivity: ${HARBOR_HOST_PRD}\""
+    - "curl -sk --connect-timeout 10 -o /dev/null -w 'HTTP %{http_code} in %{time_total}s\\n' https://${HARBOR_HOST_PRD}/v2/ || true"
+    - "echo \"${HARBOR_PASSWORD_PRD}\" | docker login ${HARBOR_HOST_PRD} -u ${HARBOR_USER_PRD} --password-stdin"
+    - "export APP_JAR=$(ls caremate-admin-api-web/target/*.jar | head -n 1)"
+    - "export JAR_NAME=$(basename \"${APP_JAR}\")"
+    - "echo \"JAR file: ${APP_JAR} (name: ${JAR_NAME})\""
+    - "ls -la caremate-admin-api-web/target/"
+    - "mv .dockerignore .dockerignore.bak 2>/dev/null || true"
+    - "docker build --build-arg JAR=${APP_JAR} --build-arg JAR_NAME=${JAR_NAME} --build-arg APP_NAME=${PROJECT_NAME} -t ${PROJECT_NAME}:${APP_VERSIONS} --file ./Dockerfile ."
+    - "mv .dockerignore.bak .dockerignore 2>/dev/null || true"
+    - "docker tag ${PROJECT_NAME}:${APP_VERSIONS} ${HARBOR_HOST_PRD}/${HARBOR_NAMESPACE}/${PROJECT_NAME}:latest"
+    - docker push ${HARBOR_HOST_PRD}/${HARBOR_NAMESPACE}/${PROJECT_NAME}:latest
+    - "echo \"Image pushed successfully to PRD\""
+  cache:
+    key: "${CI_COMMIT_REF_NAME}"
+    paths:
+      - caremate-admin-api-web/target/
+  artifacts:
+    paths:
+      - caremate-admin-api-web/target/*.jar
+    expire_in: 1 day
