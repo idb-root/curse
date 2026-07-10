@@ -1,0 +1,69 @@
+陪诊 / 小诺健康
+环境地址与 GitRunner CI 发布状态
+
+================================================================================
+
+一、环境地址
+--------------------------------------------------------------------------------
+
+1. 测试环境（UAT）
+
+   陪诊系统
+   https://cns-uat.cignacmbhealth.com/y29spoLkgu.txt
+
+   小诺健康
+   https://hss-uat.xiaonuohealth.com/y29spoLkgu.txt
+
+2. 生产环境（PRD）
+
+   陪诊系统
+   https://cns.cignacmbhealth.com/y29spoLkgu.txt
+
+   小诺健康
+   https://hss.xiaonuohealth.com/y29spoLkgu.txt
+
+================================================================================
+
+二、GitRunner CI 发布状态
+--------------------------------------------------------------------------------
+
+1. 测试环境（UAT）
+
+   【Java 全部 4 工程】—— 已调试成功
+
+   - cns-admin-api　　后台后端
+   - cns-app-api　　　后台后端
+   - hss-admin-api　　用户端后端
+   - hss-app-api　　　用户端后端
+
+   【Node 全部 5 工程】—— 已调试成功
+
+   - cns-admin-web　　后台前端
+   - cns-app-web　　　后台前端
+   - hss-admin-web　　用户端前端
+   - hss-app-web　　　用户端前端
+   - hss-holo　　　　 健康档案
+
+   结论：测试环境 Java 4 工程 + Node 5 工程，CI 发布流程均已调试成功。
+
+2. 生产环境（PRD）
+
+   【Java 全部 4 工程】—— 已调试成功
+
+   - cns-admin-api　　后台后端
+   - cns-app-api　　　后台后端
+   - hss-admin-api　　用户端后端
+   - hss-app-api　　　用户端后端
+
+   【Node 全部 5 工程】—— 配置调试中（目前暂无已知问题）
+
+   - cns-admin-web　　后台前端
+   - cns-app-web　　　后台前端
+   - hss-admin-web　　用户端前端
+   - hss-app-web　　　用户端前端
+   - hss-holo　　　　 健康档案
+
+   结论：生产环境 Java 4 工程 CI 发布流程已调试成功；
+         Node 5 工程仍在配置调试中，目前暂无已知问题。
+
+================================================================================
