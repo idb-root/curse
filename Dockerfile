@@ -1,5 +1,5 @@
-# Ubuntu + JDK 21 基础运行镜像
-FROM ubuntu:24.04
+# Ubuntu 22.04 + JDK 21 基础运行镜像
+FROM ubuntu:22.04
 
 LABEL maintainer="zhuxiuwei <zhuxiuwei@hh-medic.com>"
 
@@ -39,7 +39,7 @@ RUN apt-get update \
 ADD jdk-21.0.8_linux-x64_bin.tar.gz /usr/local/
 
 # 创建用户/组，并确保应用目录存在
-# Ubuntu 24.04 默认已有 uid/gid 1000 的 ubuntu 用户，需先移除
+# 若基础镜像已占用 uid/gid 1000，先清理再创建 OPS_admin
 RUN userdel -r ubuntu 2>/dev/null || true \
  && groupdel ubuntu 2>/dev/null || true \
  && groupadd -g 1000 OPS_admin \
