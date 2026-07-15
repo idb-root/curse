@@ -17,15 +17,20 @@ ENV TZ=${TZ} \
     PATH=/usr/local/${JDK_DIR}/bin:$PATH \
     DEBIAN_FRONTEND=noninteractive
 
-# 安装基础依赖：时区、UTF-8 语言环境、常用证书
+# 安装基础依赖：时区、UTF-8 语言环境、常用证书，
+# 以及 Java2D/验证码绘制所需的字体库（libfontmanager.so 依赖 libfreetype.so.6）
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
         ca-certificates \
+        fontconfig \
+        fonts-dejavu-core \
+        libfreetype6 \
         locales \
         tzdata \
  && ln -sf /usr/share/zoneinfo/${TZ} /etc/localtime \
  && echo "${TZ}" > /etc/timezone \
  && localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8 \
+ && fc-cache -f \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
@@ -34,7 +39,10 @@ RUN apt-get update \
 ADD jdk-21.0.8_linux-x64_bin.tar.gz /usr/local/
 
 # 创建用户/组，并确保应用目录存在
-RUN groupadd -g 1000 OPS_admin \
+# Ubuntu 24.04 默认已有 uid/gid 1000 的 ubuntu 用户，需先移除
+RUN userdel -r ubuntu 2>/dev/null || true \
+ && groupdel ubuntu 2>/dev/null || true \
+ && groupadd -g 1000 OPS_admin \
  && useradd -u 1000 -g 1000 -m -s /bin/sh OPS_admin \
  && mkdir -p ${APP_HOME} \
  && chown -R OPS_admin:OPS_admin ${APP_HOME}
