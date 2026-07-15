@@ -1,4 +1,5 @@
 # Ubuntu 22.04 + JDK 21 基础运行镜像
+# 用途：caremate 等 Java 服务运行时；含验证码/Java2D 所需字体依赖
 FROM ubuntu:22.04
 
 LABEL maintainer="zhuxiuwei <zhuxiuwei@hh-medic.com>"
@@ -7,7 +8,6 @@ ARG TZ=Asia/Shanghai
 ARG JDK_DIR=jdk-21.0.8
 ARG APP_HOME=/hh-medic/app
 
-# 时区 + 语言环境 + Java 环境变量（合并，减少层）
 ENV TZ=${TZ} \
     LANG=en_US.UTF-8 \
     LANGUAGE=en_US:en \
@@ -17,8 +17,8 @@ ENV TZ=${TZ} \
     PATH=/usr/local/${JDK_DIR}/bin:$PATH \
     DEBIAN_FRONTEND=noninteractive
 
-# 安装基础依赖：时区、UTF-8 语言环境、常用证书，
-# 以及 Java2D/验证码绘制所需的字体库（libfontmanager.so 依赖 libfreetype.so.6）
+# 基础运行依赖 + Java2D 字体库
+# libfontmanager.so 依赖系统库 libfreetype.so.6（由 libfreetype6 提供）
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
         ca-certificates \
@@ -34,12 +34,11 @@ RUN apt-get update \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
-# 安装 JDK 21（ADD 会自动解压 tar.gz 到 /usr/local/）
-# 构建前请将 jdk-21.0.8_linux-x64_bin.tar.gz 放在与 Dockerfile 同级目录
+# 构建上下文需提供：jdk-21.0.8_linux-x64_bin.tar.gz（与 Dockerfile 同级）
+# ADD 会自动解压到 /usr/local/jdk-21.0.8
 ADD jdk-21.0.8_linux-x64_bin.tar.gz /usr/local/
 
-# 创建用户/组，并确保应用目录存在
-# 若基础镜像已占用 uid/gid 1000，先清理再创建 OPS_admin
+# 非 root 运行用户（兼容清理可能占用的 uid/gid 1000）
 RUN userdel -r ubuntu 2>/dev/null || true \
  && groupdel ubuntu 2>/dev/null || true \
  && groupadd -g 1000 OPS_admin \
