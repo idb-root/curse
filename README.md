@@ -13,3 +13,16 @@ powershell -ExecutionPolicy Bypass -File .\scripts\windows-disable-animations.ps
 ```
 
 详细说明见 [docs/windows-disable-animations.md](docs/windows-disable-animations.md)。
+
+## macOS 关闭程序窗口动画
+
+关闭 macOS 程序打开、关闭、缩放等窗口动画：
+
+```bash
+chmod +x ./scripts/macos-disable-animations.sh
+./scripts/macos-disable-animations.sh
+./scripts/macos-disable-animations.sh status
+./scripts/macos-disable-animations.sh enable
+```
+
+详细说明见 [docs/macos-disable-animations.md](docs/macos-disable-animations.md)。
